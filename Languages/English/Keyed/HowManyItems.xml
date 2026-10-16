@@ -2,6 +2,5 @@
 <LanguageData>
   <HowManyItems_InCaravan>In caravan: {0}</HowManyItems_InCaravan>
   <HowManyItems_InTile>In tile: {0}</HowManyItems_InTile>
-  <HowManyItems_TileCountNotTracked>In tile: not tracked by the resource readout</HowManyItems_TileCountNotTracked>
   <HowManyItems_TileCountUnavailable>In tile: no loaded player-home map</HowManyItems_TileCountUnavailable>
 </LanguageData>

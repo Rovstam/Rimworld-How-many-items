@@ -8,3 +8,4 @@ C:\Users\PERSONAL\Documents\My Games\Rimworld\RimWorld modding\How many items\ob
 C:\Users\PERSONAL\Documents\My Games\Rimworld\RimWorld modding\How many items\obj\Debug\refint\HowManyItems.dll
 C:\Users\PERSONAL\Documents\My Games\Rimworld\RimWorld modding\How many items\obj\Debug\HowManyItems.pdb
 C:\Users\PERSONAL\Documents\My Games\Rimworld\RimWorld modding\How many items\obj\Debug\ref\HowManyItems.dll
+C:\Users\PERSONAL\Documents\My Games\Rimworld\RimWorld modding\How many items\obj\Debug\HowManyItems.sourcelink.json
