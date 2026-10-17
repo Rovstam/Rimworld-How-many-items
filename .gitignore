@@ -1,0 +1,12 @@
+# .NET build intermediates
+[Bb]in/
+[Oo]bj/
+
+# Generated IDE state
+.vs/
+*.user
+*.suo
+
+# Generated build metadata and debug symbols; keep the mod assembly itself
+/Assemblies/*.deps.json
+/Assemblies/*.pdb
