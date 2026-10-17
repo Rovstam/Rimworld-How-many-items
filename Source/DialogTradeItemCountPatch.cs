@@ -10,7 +10,7 @@ internal static class VanillaTradeRowPatch
 {
     private static void Prefix(Tradeable trad)
     {
-        ColonyCountTooltipContext.Begin(trad, isColonyRow: true);
+        ColonyCountTooltipContext.Begin(trad, isColonyRow: null);
     }
 
     private static void Postfix()
@@ -55,16 +55,17 @@ internal static class TradeUIRevisedTradeRowPatch
 }
 
 [HarmonyPatch(typeof(TooltipHandler), nameof(TooltipHandler.TipRegionByKey), new[] { typeof(UnityEngine.Rect), typeof(string) })]
-internal static class ColonyCountTooltipPatch
+internal static class TradeCountTooltipPatch
 {
     private static bool Prefix(UnityEngine.Rect rect, string key)
     {
-        if (key != "ColonyCount" || !ColonyCountTooltipContext.Active)
+        if (!ColonyCountTooltipContext.ShouldAugment(key) ||
+            (!Mouse.IsOver(rect) && !DebugViewSettings.drawTooltipEdges))
         {
             return true;
         }
 
-        TooltipHandler.TipRegion(rect, ColonyCountTooltipContext.BuildText());
+        TooltipHandler.TipRegion(rect, ColonyCountTooltipContext.BuildText(key));
         return false;
     }
 }
@@ -81,40 +82,106 @@ internal static class ColonyCountTooltipContext
     private static int tileCount;
 
     [System.ThreadStatic]
-    private static bool tileCountTracked;
+    private static bool tileCountAvailable;
 
     [System.ThreadStatic]
-    private static bool tileCountAvailable;
+    private static Thing rowThing;
+
+    [System.ThreadStatic]
+    private static TransferAsOneMode matchingMode;
+
+    [System.ThreadStatic]
+    private static string rowTooltipKey;
+
+    private static TradeDeal cachedDeal;
+    private static Map cachedMap;
+    private static Thing cachedThing;
+    private static int cachedTick = -1;
+    private static int cachedTileCount;
 
     public static bool Active => active;
 
-    public static void Begin(Tradeable trad, bool isColonyRow)
+    public static void Begin(Tradeable trad, bool? isColonyRow)
     {
         active = false;
-        if (!isColonyRow || !TradeSession.Active || trad?.ThingDef == null)
+        if (!TradeSession.Active || trad?.AnyThing == null || trad.AnyThing is Pawn)
         {
             return;
         }
 
-        var homeMap = Find.AnyPlayerHomeMap;
-        var thingDef = trad.ThingDef;
+        rowTooltipKey = isColonyRow == true
+            ? "ColonyCount"
+            : isColonyRow == false
+                ? "TraderCount"
+                : null;
+        rowThing = trad.AnyThing;
+        matchingMode = trad.TraderWillTrade
+            ? TransferAsOneMode.Normal
+            : TransferAsOneMode.InactiveTradeable;
         caravanCount = trad.CountHeldBy(Transactor.Colony);
-        tileCountAvailable = homeMap?.resourceCounter != null;
-        tileCountTracked = tileCountAvailable && thingDef.CountAsResource;
-        tileCount = tileCountTracked ? homeMap.resourceCounter.GetCount(thingDef) : 0;
+        tileCountAvailable = Find.AnyPlayerHomeMap != null;
         active = true;
     }
 
-    public static string BuildText()
+    public static bool ShouldAugment(string key)
     {
-        var text = "ColonyCount".Translate().ToString();
+        return active &&
+            (rowTooltipKey == null || key == rowTooltipKey) &&
+            (key == "ColonyCount" || key == "TraderCount");
+    }
+
+    public static string BuildText(string tooltipKey)
+    {
+        var text = tooltipKey.Translate().ToString();
         text += "\n\n" + "HowManyItems_InCaravan".Translate(caravanCount).ToString();
         text += "\n" + (!tileCountAvailable
             ? "HowManyItems_TileCountUnavailable".Translate().ToString()
-            : tileCountTracked
-                ? "HowManyItems_InTile".Translate(tileCount).ToString()
-                : "HowManyItems_TileCountNotTracked".Translate().ToString());
+            : "HowManyItems_InTile".Translate(GetStoredCount()).ToString());
         return text;
+    }
+
+    private static int GetStoredCount()
+    {
+        var map = Find.AnyPlayerHomeMap;
+        if (map == null || rowThing == null)
+        {
+            return 0;
+        }
+
+        var deal = TradeSession.deal;
+        var tick = Find.TickManager.TicksGame;
+        if (object.ReferenceEquals(cachedDeal, deal) &&
+            object.ReferenceEquals(cachedMap, map) &&
+            object.ReferenceEquals(cachedThing, rowThing) &&
+            cachedTick == tick)
+        {
+            return cachedTileCount;
+        }
+
+        tileCount = 0;
+        foreach (var group in map.haulDestinationManager.AllGroupsListForReading)
+        {
+            foreach (var storedThing in group.HeldThings)
+            {
+                if (storedThing.IsNotFresh() ||
+                    (storedThing.SpawnedOrAnyParentSpawned && storedThing.PositionHeld.Fogged(storedThing.MapHeld)))
+                {
+                    continue;
+                }
+
+                if (TransferableUtility.TransferAsOne(rowThing, storedThing, matchingMode))
+                {
+                    tileCount += storedThing.stackCount;
+                }
+            }
+        }
+
+        cachedDeal = deal;
+        cachedMap = map;
+        cachedThing = rowThing;
+        cachedTick = tick;
+        cachedTileCount = tileCount;
+        return tileCount;
     }
 
     public static void End()

@@ -3,7 +3,7 @@
   <packageId>Rovstam.HowManyItems</packageId>
   <name>How many items</name>
   <author>Rovstam</author>
-  <description>Shows caravan and settlement resource-readout counts in the colony item tooltip when trading with a world-map caravan.</description>
+  <description>Shows caravan and stored settlement-map item counts in the colony item tooltip when trading with a world-map caravan.</description>
   <supportedVersions>
     <li>1.7</li>
   </supportedVersions>
